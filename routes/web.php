@@ -2,6 +2,8 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
+use Illuminate\Http\Request;
+
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -20,3 +22,9 @@ $router->post('/client', 'ClientController@store');
 
 // create user
 $router->post('/auth/register', 'AuthController@register');
+$router->post('/auth/login', 'AuthController@login');
+
+
+$router->get('/user', ['middleware' => 'checkToken', function (Request $request) {
+    return $request->all();
+}]);

@@ -11,12 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('refresh_tokens', function (Blueprint $table) {
-            $table->uuid('id');
-            $table->string('access_id');
-            $table->integer('revoked');
-            $table->timestamp('expires_at');
-        });
+        //
     }
 
     /**
@@ -24,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('refresh_tokens');
+        //
     }
 };

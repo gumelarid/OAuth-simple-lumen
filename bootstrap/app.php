@@ -73,12 +73,14 @@ $app->configure('app');
 */
 
 // $app->middleware([
-//     App\Http\Middleware\ExampleMiddleware::class
+// App\Http\Middleware\ExampleMiddleware::class,
+// App\Http\Middleware\CheckToken::class
 // ]);
 
-// $app->routeMiddleware([
-//     'auth' => App\Http\Middleware\Authenticate::class,
-// ]);
+$app->routeMiddleware([
+    // 'auth' => App\Http\Middleware\Authenticate::class,
+    'checkToken' => App\Http\Middleware\CheckToken::class
+]);
 
 /*
 |--------------------------------------------------------------------------

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('user_id');
             $table->string('token')->nullable();
-            $table->string('otp');
+            $table->string('otp')->nullable();
             $table->enum('provider', [0, 1, 2]);
             $table->timestamps();
         });
