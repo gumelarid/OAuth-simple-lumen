@@ -48,6 +48,7 @@ class AuthController extends Controller
             'name'      =>  $name,
             'email'     =>  $email,
             'password'  =>  $password,
+            'profile'   =>  'default.png',
             'is_active' =>  0
         ]);
 
