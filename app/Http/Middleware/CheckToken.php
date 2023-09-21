@@ -25,7 +25,7 @@ class CheckToken
 
         $check = $this->isValidToken($request->header('Authorization'));
 
-        if (!$check || $check->expires_at < Carbon::now()) {
+        if (!$check || $check->expires_at < Carbon::now() || $check->revoke == 1) {
             return response()->json(['message' => 'Unauthorized Token Expired'], 401);
         }
 
@@ -43,10 +43,11 @@ class CheckToken
 
     private function isValidToken($token)
     {
-        $decript = base64_decode($token);
-        $result = explode('|', $decript);
 
-        $check = AccessToken::where('access_id', $result[1])->first();
+        list($headersB64, $payloadB64, $sig) = explode('.', $token);
+        $decoded = json_decode(base64_decode($payloadB64), true);
+
+        $check = AccessToken::where('access_id', $decoded['iss'])->first();
 
         return $check;
     }

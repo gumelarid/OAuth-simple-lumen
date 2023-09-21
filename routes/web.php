@@ -2,6 +2,7 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
+use App\Helpers\AllFunction;
 use Illuminate\Http\Request;
 
 /*
@@ -26,5 +27,5 @@ $router->post('/auth/login', 'AuthController@login');
 
 
 $router->get('/user', ['middleware' => 'checkToken', function (Request $request) {
-    return $request->all();
+    return AllFunction::response(200, 'OK', 'get user success', $request->all());
 }]);
