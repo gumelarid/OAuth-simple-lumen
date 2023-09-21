@@ -25,6 +25,8 @@ $router->post('/client', 'ClientController@store');
 $router->post('/auth/register', 'AuthController@register');
 $router->post('/auth/login', 'AuthController@login');
 
+$router->post('/auth/sosmed', 'AuthController@checkId');
+
 
 $router->get('/user', ['middleware' => 'checkToken', function (Request $request) {
     return AllFunction::response(200, 'OK', 'get user success', $request->all());
