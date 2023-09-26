@@ -3,15 +3,63 @@
 namespace App\Helpers;
 
 use Firebase\JWT\JWT;
+use Illuminate\Support\Str;
+use App\Helpers\AllFunction;
 
 class AllFunction
 {
+
+    public static function checkCategory($data)
+    {
+
+        if ($data == "c82020f4-90d1-4e20-977f-3ab1a4ba34ea") {
+            return '01';
+        } else if ($data == "6a44b8c6-e460-4327-bf7a-237cd174bf69") {
+            return '02';
+        } else {
+            return '03';
+        }
+    }
+
+
+    // Fungsi untuk mendapatkan kode invoice berikutnya
+    public static function generateInvoice($category, $currentInvoiceNumber)
+    {
+        // Misalkan kodeCategory diambil dari input atau database
+        $kodeCategory = AllFunction::checkCategory($category); // Contoh: e-wallet
+
+        $randomDigits = mt_rand(0, 99);
+
+        // Mendapatkan bulan dan tahun saat ini (yymm)
+        $currentMonthYear = date('ym');
+
+        if ($currentInvoiceNumber !== null) {
+            // Memisahkan kodeCategory, tahun, dan bulan dari invoice terakhir
+            list($invoice, $lastKodeCategory, $lastMonthYear, $lastAutoIncrement) = explode('-', $currentInvoiceNumber->invoice);
+
+
+            $last = substr($lastAutoIncrement, 2, 10);
+
+
+            $autoIncrement = intval($last) + 1;
+
+            // Generate invoice berikutnya
+            $nextInvoiceNumber = $invoice . '-' . $kodeCategory . '-' . $currentMonthYear . '-' . $randomDigits . str_pad($autoIncrement, 5, '0', STR_PAD_LEFT);
+        } else {
+            $autoIncrement = 1;
+            $invoice = "INV";
+            $nextInvoiceNumber = $invoice . '-' . $kodeCategory . '-' . $currentMonthYear . '-' . $randomDigits . str_pad($autoIncrement, 5, '0', STR_PAD_LEFT);
+        }
+
+        return $nextInvoiceNumber;
+    }
 
     // response
     public static function response($code = 200, $status = 'OK', $message = null, $data = null)
     {
 
         return Response([
+            'code'    => $code,
             'status'  => $status,
             'message' => $message,
             'data'    => $data
@@ -46,34 +94,8 @@ class AllFunction
 
     public static function generateId($data)
     {
+        $id = '101' . \strtoupper(Str::random(8));
 
-        $currentYear = date('y');
-        $currentMonth = date('m');
-
-        $id = '1' . $currentYear . $currentMonth;
-
-        // Retrieve the last generated ID from your data source (e.g., database)
-        $lastGeneratedId = $data; // Replace with your own logic
-
-        // Check if the ID has been generated before
-        if ($lastGeneratedId === null || substr($lastGeneratedId, 1, 4) !== $id) {
-            // If the ID has not been generated before or it's a new month,
-            // reset the increment to 1
-            $increment = 1;
-        } else {
-            // If the ID has been generated before in the same month,
-            // increment the last generated ID
-            $increment = intval(substr($lastGeneratedId, -4)) + 1;
-        }
-
-        // Pad the increment with leading zeros
-        $increment = str_pad($increment, 4, '0', STR_PAD_LEFT);
-
-        // Combine the ID pattern with the increment
-        $generatedId = $id . $increment;
-
-        // Store or update the generated ID in your data source
-
-        return $generatedId;
+        return $id;
     }
 }

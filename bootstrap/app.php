@@ -79,7 +79,8 @@ $app->configure('app');
 
 $app->routeMiddleware([
     // 'auth' => App\Http\Middleware\Authenticate::class,
-    'checkToken' => App\Http\Middleware\CheckToken::class
+    'checkToken' => App\Http\Middleware\CheckToken::class,
+    'api-key'   => App\Http\Middleware\ApiKey::class,
 ]);
 
 /*
