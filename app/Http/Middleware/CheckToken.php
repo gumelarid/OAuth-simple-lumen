@@ -36,6 +36,7 @@ class CheckToken
             'name'      => $user->name,
             'email'     => $user->email,
             'profile'   => $user->profile,
+            'phone'     => $user->phone
         ]);
 
         return $next($request);

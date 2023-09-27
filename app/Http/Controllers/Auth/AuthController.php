@@ -33,7 +33,62 @@ class AuthController extends Controller
 
     public function sendToken(Request $request)
     {
-        dd($request);
+        try {
+            $this->validate($request, [
+                'email'             => 'required|email',
+            ]);
+
+            $email = $request->input('email');
+
+            $user = User::where('email', $email)->first();
+
+            if (!$user) {
+
+                $token = \strtoupper(Str::random(7));
+
+                $last = User::latest()->first();
+
+                $id = AllFunction::generateId($last);
+
+                $data = User::create([
+                    'user_id'   => $id,
+                    'name'      => 'ESI GAMES',
+                    'email'     => $request->email,
+                    'token'     => $token,
+                    'is_active' => 1
+                ]);
+
+                User_token::create([
+                    'user_id' => $id,
+                    'token' => $token,
+                    'provider' => 'token',
+                ]);
+            } else {
+                $token = \strtoupper(Str::random(7));
+
+                $user_id = $user->user_id;
+
+                $check =  User_token::where('user_id', $user_id)->first();
+
+                if ($check) {
+                    User_token::where('user_id', $user_id)->update([
+                        'user_id' => $user_id,
+                        'token' => $token,
+                        'provider' => 'token',
+                    ]);
+                } else {
+                    User_token::create([
+                        'user_id' => $id,
+                        'token' => $token,
+                        'provider' => 'token',
+                    ]);
+                }
+            }
+
+            return AllFunction::response(200, 'OK', 'Check Your Email and input your Token', $email);
+        } catch (\Throwable $th) {
+            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        }
     }
 
     public function login(Request $request)
@@ -53,14 +108,14 @@ class AuthController extends Controller
             $user = User::where('email', $email)->first();
 
 
-            if (!$user) {
+            if (!$user || $user->token == null) {
                 $token = \strtoupper(Str::random(7));
 
                 $last = User::latest()->first();
 
                 $id = AllFunction::generateId($last);
 
-                User::create([
+                $data = User::create([
                     'user_id'   => $id,
                     'name'      => 'ESI GAMES',
                     'email'     => $request->email,
@@ -69,6 +124,7 @@ class AuthController extends Controller
                 ]);
 
                 $user = User::where('email', $email)->first();
+                DB::commit();
 
                 return AllFunction::response(200, 'OK', 'Check Your Email and input your Token', $email);
             } else {
