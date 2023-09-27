@@ -67,28 +67,28 @@ class AllFunction
     }
 
     // generate Access Token
-    public static function generateAccessToken($secret, $user_id, $app_id, $expired)
+    public static function generateAccessToken($app_id, $user_id, $access_id, $expired)
     {
         $payload = array(
             "sub" => $user_id,
-            "iss" => $app_id,
+            "iss" => $access_id,
             "iat" => time(),
             "exp" => $expired->timestamp
         );
 
-        return JWT::encode($payload, $secret, 'HS256');
+        return JWT::encode($payload, $app_id, 'HS256');
     }
 
     // generetae refresh Token
-    public static function generateRefreshToken($secret, $user_id, $app_id, $refreshExpired)
+    public static function generateRefreshToken($app_id, $user_id, $access_id, $refreshExpired)
     {
         $payload = array(
             "sub" => $user_id,
-            "iss" => $app_id,
+            "iss" => $access_id,
             "exp" => $refreshExpired->timestamp
         );
 
-        return JWT::encode($payload, $secret, 'HS256');
+        return JWT::encode($payload, $app_id, 'HS256');
     }
 
 

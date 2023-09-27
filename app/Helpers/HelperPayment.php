@@ -35,6 +35,7 @@ class HelperPayment
         $result['payment']['name'] = $data->pricepoints->name_currency;
         $result['payment']['logo'] = $url . '/image/' . $data->payment->logo;
         $result['payment']['logo_ppi'] = $url . '/image/items/' . $data->gamelist->slug_game . '/' . $data->pricepoints->img;
+        $result['payment']['category_item'] = $data->pricepoints->category;
         $result['payment']['expired'] = $data->expired_time;
         $result['payment']['leftTime'] = HelperPayment::calculateLeftTime($data->expired_time);
         // $result['payment']['ppn'] = $this->_invoiceRepository->getAllDataPpn()[0]['ppn'];

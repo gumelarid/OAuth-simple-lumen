@@ -72,6 +72,6 @@ $router->group(['prefix' => 'api/v1', 'middleware' => 'api-key'], function () us
 
 
     //send otp
-    $router->post('/send-otp', 'Auth\AuthController@sendOtp');
-    $router->post('/check-otp', 'Auth\AuthController@checkOtp');
+    $router->post('/send-otp', 'AuthS\AuthController@sendOtp');
+    $router->post('/check-otp', 'AuthS\AuthController@checkOtp');
 });

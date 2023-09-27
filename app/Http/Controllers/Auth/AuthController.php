@@ -36,7 +36,13 @@ class AuthController extends Controller
         try {
             $this->validate($request, [
                 'email'             => 'required|email',
+                'app_id'            => 'required',
             ]);
+
+            $clientSecret = Client::where('id', $request->app_id)->first();
+            if (!$clientSecret) {
+                return AllFunction::response(400, 'Validation failed', 'Validation failed');
+            };
 
             $email = $request->input('email');
 
@@ -44,7 +50,7 @@ class AuthController extends Controller
 
             if (!$user) {
 
-                $token = \strtoupper(Str::random(7));
+                $token = \strtoupper(Str::random(8));
 
                 $last = User::latest()->first();
 
@@ -61,10 +67,10 @@ class AuthController extends Controller
                 User_token::create([
                     'user_id' => $id,
                     'token' => $token,
-                    'provider' => 'token',
+                    'provider' => '3',
                 ]);
             } else {
-                $token = \strtoupper(Str::random(7));
+                $token = \strtoupper(Str::random(8));
 
                 $user_id = $user->user_id;
 
@@ -74,13 +80,13 @@ class AuthController extends Controller
                     User_token::where('user_id', $user_id)->update([
                         'user_id' => $user_id,
                         'token' => $token,
-                        'provider' => 'token',
+                        'provider' => '3',
                     ]);
                 } else {
                     User_token::create([
-                        'user_id' => $id,
+                        'user_id' => $user_id,
                         'token' => $token,
-                        'provider' => 'token',
+                        'provider' => '3',
                     ]);
                 }
             }
@@ -100,47 +106,44 @@ class AuthController extends Controller
 
             $this->validate($request, [
                 'email'             => 'required|email',
+                'app_id'            => 'required',
+                'token'             => 'required'
             ]);
 
             $email = $request->input('email');
+            $app_id = $request->input('app_id');
+            $token = strtoupper($request->input('token'));
+
+
+            $clientSecret = Client::where('id', $app_id)->first();
+            if (!$clientSecret) {
+                return AllFunction::response(400, 'Validation failed', 'Validation failed');
+            };
 
 
             $user = User::where('email', $email)->first();
 
-
-            if (!$user || $user->token == null) {
-                $token = \strtoupper(Str::random(7));
-
-                $last = User::latest()->first();
-
-                $id = AllFunction::generateId($last);
-
-                $data = User::create([
-                    'user_id'   => $id,
-                    'name'      => 'ESI GAMES',
-                    'email'     => $request->email,
-                    'token'     => $token,
-                    'is_active' => 1
-                ]);
-
-                $user = User::where('email', $email)->first();
-                DB::commit();
-
-                return AllFunction::response(200, 'OK', 'Check Your Email and input your Token', $email);
-            } else {
-                // check token
-                if ($request->token !== $user->token) {
-                    return AllFunction::response(401, 'Failed', 'Login Failed, Token not valid');
-                }
-
-                User::where('email', $email)->update([
-                    'token'     => null,
-                ]);
+            if (!$user) {
+                return AllFunction::response(401, 'Failed', 'Login Failed, User Not Found');
             }
 
-            // check token
+            $check =  User_token::where('user_id', $user->user_id)->first();
 
-            $clientSecret = Client::where('id', $request->app_id)->first();
+            // check token
+            if ($token != $check->token) {
+                return AllFunction::response(401, 'Failed', 'Login Failed, Token not valid');
+            }
+
+            User::where('email', $email)->update([
+                'token'     => null,
+            ]);
+
+            User_token::where('user_id', $user->user_id)->update([
+                'token' => null,
+                'provider' => '3',
+            ]);
+
+            // check token
 
             $generateToken = bin2hex(random_bytes(32));
 
@@ -149,7 +152,7 @@ class AuthController extends Controller
             $refreshExpired = $created->addDays(14);
 
 
-            AccessToken::create([
+            $accessToken = AccessToken::create([
                 'access_id' => $generateToken,
                 'user_id'   => $user->user_id,
                 'client_id' => $clientSecret->id,
@@ -159,13 +162,21 @@ class AuthController extends Controller
                 'created_at' => $created,
             ]);
 
+            if (!$accessToken) {
+                return AllFunction::response(401, 'Failed', 'Login Failed, Access Token not valid');
+            };
+
             $refresh_id = str::uuid();
-            RefreshToken::create([
+            $refreshToken = RefreshToken::create([
                 'id'        => $refresh_id,
                 'access_id' => $generateToken,
                 'expires_at' => $refreshExpired,
                 'revoked'    => 0,
             ]);
+
+            if (!$refreshToken) {
+                return AllFunction::response(401, 'Failed', 'Login Failed, Refresh Token not valid');
+            };
 
             $accessToken = AllFunction::generateAccessToken($request->app_id, $user->user_id, $generateToken, $expired);
 
