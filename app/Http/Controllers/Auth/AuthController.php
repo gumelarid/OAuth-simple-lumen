@@ -11,6 +11,7 @@ use App\Models\User_token;
 use App\Models\AccessToken;
 use Illuminate\Support\Str;
 use App\Helpers\AllFunction;
+use App\Helpers\SendMail;
 use App\Models\RefreshToken;
 use Illuminate\Http\Request;
 use App\Models\SocialAccount;
@@ -50,7 +51,7 @@ class AuthController extends Controller
 
             if (!$user) {
 
-                $token = \strtoupper(Str::random(8));
+                $token = \strtoupper(Str::random(6));
 
                 $last = User::latest()->first();
 
@@ -70,7 +71,7 @@ class AuthController extends Controller
                     'provider' => '3',
                 ]);
             } else {
-                $token = \strtoupper(Str::random(8));
+                $token = \strtoupper(Str::random(6));
 
                 $user_id = $user->user_id;
 
@@ -90,6 +91,10 @@ class AuthController extends Controller
                     ]);
                 }
             }
+
+
+            SendMail::sendToken($token, $email);
+
 
             return AllFunction::response(200, 'OK', 'Check Your Email and input your Token', $email);
         } catch (\Throwable $th) {
@@ -208,10 +213,16 @@ class AuthController extends Controller
                 $last = User::latest()->first();
                 $id = AllFunction::generateId($last);
 
+                if ($request->provider == 'facebook') {
+                    $img = $request->profile . '&access_token=' . $request->access_token;
+                } else {
+                    $img = $request->profile;
+                }
+
                 $d = User::create([
                     'user_id'   => $id,
                     'email' => $request->email,
-                    'profile' => $request->profile,
+                    'profile' => $img,
                     'token' => null,
                     'name' => $request->name,
                     'is_active' => 1,
@@ -227,12 +238,21 @@ class AuthController extends Controller
 
                 $dt = User::where('user_id', $id)->first();
             } else {
+                $dt = User::where('user_id', $user->user_Id)->first();
+
+                if ($request->provider == 'facebook') {
+                    $img = $dt->profile . '&access_token=' . $user->access_token;
+                } else {
+                    $img = $dt->profile;
+                }
+
+                User::where('user_id', $user->user_Id)->update([
+                    'profile' => $img,
+                ]);
+
                 SocialAccount::where('provider_user_id', $request->id)->update([
                     'access_token' => $request->access_token
                 ]);
-
-
-                $dt = User::where('user_id', $user->user_Id)->first();
             }
 
 
@@ -289,107 +309,11 @@ class AuthController extends Controller
 
     public function sendOtp(Request $request)
     {
-        // try {
-        $no = $request->phone;
-        $provider = $request->provider;
-        $otp = rand(100000, 999999);
-        $dt = null;
-
-        if (!$no) {
-            return AllFunction::response(400, 'Validation failed', 'no Validation failed');
-        }
-
-        if (!$provider) {
-            return AllFunction::response(400, 'Validation failed', 'provider Validation failed');
-        }
-
-        if ($provider == '2') { // sms
-            $provider = '2';
-            $message = 'Kode OTP kamu adalah : ' . $otp . ', berlaku selamat 5 menit';
-            $message = urlencode($message);
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => "https://dnymobile.com/api/v3/sms/send?recipient=" . "+62" . $no . "&sender_id=DNY&message=" . $message,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_HTTPHEADER => array(
-                    'Accept: application/json',
-                    'Authorization: Bearer 686|5MXOJBpTmsnxosA4MbSXUV1kxWkRZ3I5cw8z5RWJ' //masukkan token anda
-                ),
-            ));
-            $response = curl_exec($curl);
-            curl_close($curl);
-        } else {
-            // whatsapp
-            $provider = '1';
-            $curl = curl_init();
-            $data = [
-                'target' => "+62" . $no,
-                'message' => "Your OTP : " . $otp
-            ];
-
-            curl_setopt(
-                $curl,
-                CURLOPT_HTTPHEADER,
-                array(
-                    "Authorization: fs9Yyu6!7YChwRqGQ8FZ",
-                )
-            );
-            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($curl, CURLOPT_URL, "https://api.fonnte.com/send");
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-            $result = curl_exec($curl);
-            curl_close($curl);
-        }
-
-        $user = User::where('phone', $no)->first();
-
-        if (!$user) {
-            $dt = User::create([
-                'phone' => $no,
-                'name' => 'ESI GAMER',
-                'is_active' => 1,
-            ]);
-
-            User_token::create([
-                'user_id' => $dt->id,
-                'otp' => $otp,
-                'provider' => $provider,
-            ]);
-        }
-
-        $userData = User::where('phone', $no)->first();
-
-        User_token::where('user_id', $userData->id)->update([
-            'otp' => $otp,
-            'provider' => $provider
-        ]);
-
-        $res = [
-            'phone' => $no,
-            'provider' => $provider,
-        ];
-
-        return AllFunction::response(201, 'OK', "OTP Send to " . '+62' . $no, $res);
-        // } catch (\Throwable $th) {
-        //     return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
-        // }
-    }
-
-    public function checkOtp(Request $request)
-    {
         try {
             $no = $request->phone;
-            $otp = $request->otp;
+            $provider = $request->provider;
+            $otp = rand(100000, 999999);
+            $dt = null;
 
             if (!$no) {
                 return AllFunction::response(400, 'Validation failed', 'no Validation failed');
@@ -399,24 +323,168 @@ class AuthController extends Controller
                 return AllFunction::response(400, 'Validation failed', 'provider Validation failed');
             }
 
+            if ($provider == '2') { // sms
+                $provider = '2';
+                $message = 'Kode OTP kamu adalah : ' . $otp . ', berlaku selamat 5 menit';
+                $message = urlencode($message);
+                $curl = curl_init();
+
+                curl_setopt_array($curl, array(
+                    CURLOPT_URL => "https://dnymobile.com/api/v3/sms/send?recipient=" . "+62" . $no . "&sender_id=DNY&message=" . $message,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_HTTPHEADER => array(
+                        'Accept: application/json',
+                        'Authorization: Bearer 686|5MXOJBpTmsnxosA4MbSXUV1kxWkRZ3I5cw8z5RWJ' //masukkan token anda
+                    ),
+                ));
+                $response = curl_exec($curl);
+                curl_close($curl);
+            } else {
+                // whatsapp
+                $provider = '1';
+                $curl = curl_init();
+                $data = [
+                    'target' => "+62" . $no,
+                    'message' => "Your OTP : " . $otp
+                ];
+
+                curl_setopt(
+                    $curl,
+                    CURLOPT_HTTPHEADER,
+                    array(
+                        "Authorization: fs9Yyu6!7YChwRqGQ8FZ",
+                    )
+                );
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+                curl_setopt($curl, CURLOPT_URL, "https://api.fonnte.com/send");
+                curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+                curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+                $result = curl_exec($curl);
+                curl_close($curl);
+            }
+
+            $user = User::where('phone', $no)->first();
+
+            if (!$user) {
+                $last = User::latest()->first();
+                $id = AllFunction::generateId($last);
+
+                $dt = User::create([
+                    'user_id'   => $id,
+                    'phone' => $no,
+                    'name' => 'ESI GAMER',
+                    'token' => null,
+                    'is_active' => 1,
+                ]);
+
+
+                User_token::create([
+                    'user_id' => $id,
+                    'otp' => $otp,
+                    'provider' => $provider,
+                ]);
+            }
+
+            $userData = User::where('phone', $no)->first();
+
+            User_token::where('user_id', $userData->id)->update([
+                'otp' => $otp,
+                'provider' => $provider
+            ]);
+
+            $res = [
+                'phone' => $no,
+                'provider' => $provider,
+            ];
+
+            return AllFunction::response(201, 'OK', "OTP Send to " . '+62' . $no, $res);
+        } catch (\Throwable $th) {
+            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        }
+    }
+
+    public function checkOtp(Request $request)
+    {
+        try {
+            $no = $request->phone;
+            $otp = $request->otp;
+            $app_id = $request->app_id;
+
+            if (!$no) {
+                return AllFunction::response(400, 'Validation failed', 'no Validation failed');
+            }
+
+            if (!$otp) {
+                return AllFunction::response(400, 'Validation failed', 'otp Validation failed');
+            }
+
+            if (!$app_id) {
+                return AllFunction::response(400, 'Validation failed', 'app_id Validation failed');
+            }
+
             $user = User::where('phone', $no)->first();
 
             if (!$user) {
                 return AllFunction::response(400, 'Validation failed', 'User not valid');
             }
 
-            $check = User_token::where('user_id', $user->id)->first();
+            $check = User_token::where('user_id', $user->user_id)->first();
             if ($check->otp !== $otp) {
                 return AllFunction::response(400, 'Validation failed', 'OTP not valid');
             }
 
-            User_token::where('user_id', $user->id)->update([
+            User_token::where('user_id', $user->user_id)->update([
                 'otp' => null,
             ]);
 
-            if ($token = Auth::guard('api')->login($user)) {
-                return $this->respondWithToken($token);
-            }
+            $clientSecret = Client::where('id', $app_id)->first();
+
+            $generateToken = bin2hex(random_bytes(32));
+
+            $created = Carbon::now();
+            $expired = $created->addDays(7);
+            $refreshExpired = $created->addDays(14);
+
+
+            AccessToken::create([
+                'access_id' => $generateToken,
+                'user_id'   => $user->user_id,
+                'client_id' => $clientSecret->id,
+                'name'      => $clientSecret->name,
+                'revoke'    => 0,
+                'expires_at' => $expired,
+                'created_at' => $created,
+            ]);
+
+            $refresh_id = str::uuid();
+            RefreshToken::create([
+                'id'        => $refresh_id,
+                'access_id' => $generateToken,
+                'expires_at' => $refreshExpired,
+                'revoked'    => 0,
+            ]);
+
+
+
+            $accessToken = AllFunction::generateAccessToken($app_id, $user->user_Id, $generateToken, $expired);
+
+            $refreshToken = AllFunction::generateRefreshToken($app_id, $user->user_Id, $generateToken, $refreshExpired);
+
+            $result = [
+                'token'         => $accessToken,
+                'refresh_token' => $refreshToken,
+                'expired_at'    => $expired->timestamp
+            ];
+
+            return AllFunction::response(200, 'OK', 'Login Success', $result);
         } catch (\Throwable $th) {
             return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
         }

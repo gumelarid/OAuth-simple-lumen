@@ -29,4 +29,22 @@ class SendMail
 
         return;
     }
+
+
+    public static function sendToken($token, $email)
+    {
+        if ($email) {
+            $data = [
+                'token' => $token,
+            ];
+
+            Mail::send('mail', $data, function ($message) use ($email) {
+                $message->to($email)->subject('OTP login - ESI GAMESHOP');
+            });
+
+            return 'Email sent successfully to ' . $email . '!';
+        } else {
+            return 'Invalid email address provided.';
+        }
+    }
 }
