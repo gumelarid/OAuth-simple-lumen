@@ -9,7 +9,7 @@ class SocialAccount extends Model
 {
     use HasFactory;
 
-    protected $primary = 'account_id';
+    protected $primary = 'provider_id';
     protected $guarded = [];
     protected $table = 'social_accounts';
 }

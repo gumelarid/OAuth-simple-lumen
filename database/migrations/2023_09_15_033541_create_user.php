@@ -15,9 +15,10 @@ return new class extends Migration
             $table->string('user_id');
             $table->string('name');
             $table->string('email');
-            $table->string('token');
             $table->string('phone')->nullable();
-            $table->string('profile')->nullable();
+            $table->text('profile')->nullable();
+            $table->string('provider_id')->nullable();
+            $table->string('linkedId')->nullable();
             $table->integer('is_active');
             $table->timestamps();
         });

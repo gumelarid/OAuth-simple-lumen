@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Helpers\AllFunction;
+use App\Models\Bind;
 use App\Models\User;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Str;
+use App\Helpers\AllFunction;
+use Illuminate\Http\Request;
 use App\Models\SocialAccount;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 
 class UserController extends Controller
 {
@@ -24,47 +26,68 @@ class UserController extends Controller
 
     public function binding(Request $request)
     {
-        try {
-            DB::beginTransaction();
+        // try {
+        //     DB::beginTransaction();
 
-            $user_id        = $request->user_id;
-            $name           = $request->name;
-            $email          = $request->email;
-            $profile        = $request->profile;
-            $provider       = $request->provider;
-            $provider_id    = $request->id;
-            $accessToken    = $request->access_token;
+        $user_id        = $request->user_id;
+        $name           = $request->nameBind;
+        $email          = $request->emailBind;
+        $provider       = $request->providerBind;
+        $provider_id    = $request->idBind;
+        $accessToken    = $request->accessTokenBind;
 
-            $binding = SocialAccount::where('provider_user_id', $provider_id)->first();
 
-            if ($binding) {
-                return AllFunction::response(400, 'FAILED', 'Binding failed, account find and binding by ' . $user_id);
-            }
+        // check apakah user ada
+        $user = User::where('user_id', $user_id)->first();
 
-            $d = User::create([
-                'user_id'   => $user_id,
-                'email' => $email,
-                'profile' => $profile,
-                'token' => null,
-                'name' => $name,
-                'is_active' => 1,
-            ]);
-
-            SocialAccount::create([
-                'account_Id'    => Str::uuid(),
-                'user_id' => $user_id,
-                'provider' => $provider,
-                'provider_user_id' => $provider_id,
-                'access_token' => $accessToken
-            ]);
-
-            $dt = User::where('user_id', $user_id)->first();
-
-            DB::commit();
-            return AllFunction::response(201, 'OK', 'Binding Success by user id ' . $user_id, $dt);
-        } catch (\Throwable $th) {
-            DB::rollback();
-            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        if (!$user) {
+            return AllFunction::response(400, 'FAILED', 'Binding failed, account not find');
         }
+
+        // check apakah email tersebut sudah terkoneksi
+        $userLink = User::where('provider_id', $provider_id)->first();
+
+        if ($userLink) {
+            if ($userLink->linkedId !== null) {
+                return AllFunction::response(400, 'FAILED', 'Binding failed, account binding');
+            }
+        }
+
+
+
+        // jika belum ada
+        $last = User::latest()->first();
+        $id = AllFunction::generateId($last);
+
+        if ($provider == 'facebook') {
+            $img = 'https://graph.facebook.com/v3.3/' . $provider_id . '/picture?type=normal' . '&access_token=' . $accessToken;
+        } else {
+            $img = $request->profile;
+        }
+
+        // buat user baru dengan linkedId ke user_id
+        $d = User::create([
+            'user_id'   => $id,
+            'email' => $email,
+            'profile' => $img,
+            'name' => $name,
+            'provider_id' => $provider_id,
+            'linkedId'  => $user_id,
+            'is_active' => 1,
+        ]);
+
+
+        SocialAccount::create([
+            'provider' => $provider,
+            'provider_id' => $provider_id,
+            'access_token' => $accessToken
+        ]);
+
+        //     DB::commit();
+        return AllFunction::response(201, 'OK', 'Binding Success by user id ' . $user_id . '');
+        // } catch (\Throwable $th) {
+        //     DB::rollback();
+        //     return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        // }
     }
 }

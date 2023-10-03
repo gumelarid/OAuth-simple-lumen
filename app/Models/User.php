@@ -25,4 +25,10 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     protected $hidden = [
         'password',
     ];
+
+
+    public function socialAccount()
+    {
+        return $this->belongsTo(SocialAccount::class, 'provider_id', 'provider_id');
+    }
 }

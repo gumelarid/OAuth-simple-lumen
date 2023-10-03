@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Auth;
 
 use DateTime;
 use Carbon\Carbon;
+use App\Models\Bind;
 use App\Models\User;
 use App\Models\Token;
 use App\Models\Client;
+use App\Helpers\SendMail;
 use App\Models\User_token;
 use App\Models\AccessToken;
 use Illuminate\Support\Str;
 use App\Helpers\AllFunction;
-use App\Helpers\SendMail;
 use App\Models\RefreshToken;
 use Illuminate\Http\Request;
 use App\Models\SocialAccount;
@@ -61,7 +62,6 @@ class AuthController extends Controller
                     'user_id'   => $id,
                     'name'      => 'ESI GAMES',
                     'email'     => $request->email,
-                    'token'     => $token,
                     'is_active' => 1
                 ]);
 
@@ -80,7 +80,6 @@ class AuthController extends Controller
                 if ($check) {
                     User_token::where('user_id', $user_id)->update([
                         'user_id' => $user_id,
-                        'token' => $token,
                         'provider' => '3',
                     ]);
                 } else {
@@ -93,7 +92,7 @@ class AuthController extends Controller
             }
 
 
-            SendMail::sendToken($token, $email);
+            // SendMail::sendToken($token, $email);
 
 
             return AllFunction::response(200, 'OK', 'Check Your Email and input your Token', $email);
@@ -138,10 +137,6 @@ class AuthController extends Controller
             if ($token != $check->token) {
                 return AllFunction::response(401, 'Failed', 'Login Failed, Token not valid');
             }
-
-            User::where('email', $email)->update([
-                'token'     => null,
-            ]);
 
             User_token::where('user_id', $user->user_id)->update([
                 'token' => null,
@@ -205,105 +200,105 @@ class AuthController extends Controller
     public function checkId(Request $request)
     {
 
-        try {
-            DB::beginTransaction();
-            $user = SocialAccount::where('provider_user_id', $request->id)->first();
+        // try {
+        //     DB::beginTransaction();
+        $user = SocialAccount::where('provider_id', $request->id)->first();
 
-            if (!$user) {
-                $last = User::latest()->first();
-                $id = AllFunction::generateId($last);
+        if (!$user) {
+            $last = User::latest()->first();
+            $id = AllFunction::generateId($last);
 
-                if ($request->provider == 'facebook') {
-                    $img = $request->profile . '&access_token=' . $request->access_token;
-                } else {
-                    $img = $request->profile;
-                }
-
-                $d = User::create([
-                    'user_id'   => $id,
-                    'email' => $request->email,
-                    'profile' => $img,
-                    'token' => null,
-                    'name' => $request->name,
-                    'is_active' => 1,
-                ]);
-
-                SocialAccount::create([
-                    'account_Id'    => Str::uuid(),
-                    'user_id' => $id,
-                    'provider' => $request->provider,
-                    'provider_user_id' => $request->id,
-                    'access_token' => $request->access_token
-                ]);
-
-                $dt = User::where('user_id', $id)->first();
+            if ($request->provider == 'facebook') {
+                $img = $request->profile . '&access_token=' . $request->access_token;
             } else {
-                $dt = User::where('user_id', $user->user_Id)->first();
-
-                if ($request->provider == 'facebook') {
-                    $img = $dt->profile . '&access_token=' . $user->access_token;
-                } else {
-                    $img = $dt->profile;
-                }
-
-                User::where('user_id', $user->user_Id)->update([
-                    'profile' => $img,
-                ]);
-
-                SocialAccount::where('provider_user_id', $request->id)->update([
-                    'access_token' => $request->access_token
-                ]);
+                $img = $request->profile;
             }
 
-
-
-            // check token
-
-            $clientSecret = Client::where('id', $request->app_id)->first();
-
-            $generateToken = bin2hex(random_bytes(32));
-
-            $created = Carbon::now();
-            $expired = $created->addDays(7);
-            $refreshExpired = $created->addDays(14);
-
-
-            AccessToken::create([
-                'access_id' => $generateToken,
-                'user_id'   => $dt->user_id,
-                'client_id' => $clientSecret->id,
-                'name'      => $clientSecret->name,
-                'revoke'    => 0,
-                'expires_at' => $expired,
-                'created_at' => $created,
+            $d = User::create([
+                'user_id'   => $id,
+                'email' => $request->email,
+                'profile' => $img,
+                'name' => $request->name,
+                'provider_id' => $request->id,
+                'linkedId'  => $id,
+                'is_active' => 1,
             ]);
 
-            $refresh_id = str::uuid();
-            RefreshToken::create([
-                'id'        => $refresh_id,
-                'access_id' => $generateToken,
-                'expires_at' => $refreshExpired,
-                'revoked'    => 0,
+            $acc_id = Str::uuid();
+            SocialAccount::create([
+                'provider' => $request->provider,
+                'provider_id' => $request->id,
+                'access_token' => $request->access_token
             ]);
 
+            $dt = User::where('user_id', $id)->first();
+        } else {
+            $dt = User::where('provider_id', $user->provider_id)->first();
 
+            if ($request->provider == 'facebook') {
+                $img = $dt->profile . '&access_token=' . $user->access_token;
+            } else {
+                $img = $dt->profile;
+            }
 
-            $accessToken = AllFunction::generateAccessToken($request->app_id, $dt->user_Id, $generateToken, $expired);
+            User::where('user_id', $user->user_Id)->update([
+                'profile' => $img,
+            ]);
 
-            $refreshToken = AllFunction::generateRefreshToken($request->app_id, $dt->user_Id, $generateToken, $refreshExpired);
-
-            $result = [
-                'token'         => $accessToken,
-                'refresh_token' => $refreshToken,
-                'expired_at'    => $expired->timestamp
-            ];
-
-            DB::commit();
-            return AllFunction::response(200, 'OK', 'Login Success', $result);
-        } catch (\Throwable $th) {
-            DB::rollback();
-            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+            SocialAccount::where('provider_id', $request->id)->update([
+                'access_token' => $request->access_token
+            ]);
         }
+
+
+
+        // check token
+
+        $clientSecret = Client::where('id', $request->app_id)->first();
+
+        $generateToken = bin2hex(random_bytes(32));
+
+        $created = Carbon::now();
+        $expired = $created->addDays(7);
+        $refreshExpired = $created->addDays(14);
+
+
+        AccessToken::create([
+            'access_id' => $generateToken,
+            'user_id'   => $dt->user_id,
+            'client_id' => $clientSecret->id,
+            'name'      => $clientSecret->name,
+            'revoke'    => 0,
+            'expires_at' => $expired,
+            'created_at' => $created,
+        ]);
+
+        $refresh_id = str::uuid();
+        RefreshToken::create([
+            'id'        => $refresh_id,
+            'access_id' => $generateToken,
+            'expires_at' => $refreshExpired,
+            'revoked'    => 0,
+        ]);
+
+
+
+        $accessToken = AllFunction::generateAccessToken($request->app_id, $dt->user_Id, $generateToken, $expired);
+
+        $refreshToken = AllFunction::generateRefreshToken($request->app_id, $dt->user_Id, $generateToken, $refreshExpired);
+
+        $result = [
+            'token'         => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expired_at'    => $expired->timestamp
+        ];
+
+        // DB::commit();
+        return AllFunction::response(200, 'OK', 'Login Success', $result);
+        // } catch (\Throwable $th) {
+        //     DB::rollback();
+        //     return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        // }
     }
 
 
@@ -381,7 +376,6 @@ class AuthController extends Controller
                     'user_id'   => $id,
                     'phone' => $no,
                     'name' => 'ESI GAMER',
-                    'token' => null,
                     'is_active' => 1,
                 ]);
 
