@@ -79,7 +79,7 @@ class AuthController extends Controller
 
                 if ($check) {
                     User_token::where('user_id', $user_id)->update([
-                        'user_id' => $user_id,
+                        'token' => $token,
                         'provider' => '3',
                     ]);
                 } else {

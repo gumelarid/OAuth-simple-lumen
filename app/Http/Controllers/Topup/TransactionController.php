@@ -26,6 +26,7 @@ use App\Models\TransactionDetail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Models\Player;
 
 class TransactionController extends Controller
 {
@@ -93,6 +94,28 @@ class TransactionController extends Controller
                 'refence_no' => null
             ]);
 
+            // check player id
+            $player = Player::where('user_id', $request->user_id)->first();
+
+            if ($player) {
+                if ($player->player_id !== $request->player_id) {
+                    Player::create([
+                        'player_Id' => $request->player_id,
+                        'user_id'   => $request->user_id,
+                        'game_id'   => $game->game_id
+                    ]);
+                }
+            } else {
+                if ($request->user_id) {
+                    Player::create([
+                        'player_Id' => $request->player_id,
+                        'user_id'   => $request->user_id,
+                        'game_id'   => $game->game_id
+                    ]);
+                }
+            }
+
+            // check user
             $user = User::where('user_id', $request->user_id);
             if ($user->first()) {
 
@@ -130,34 +153,34 @@ class TransactionController extends Controller
 
     public function confirmation(Request $request)
     {
-        // try {
+        try {
 
-        $invoice = $request->query('invoice');
+            $invoice = $request->query('invoice');
 
-        $data = Transaction::with('payment', 'pricepoints', 'gamelist', 'transactionDetail')->where('invoice', $invoice)->first();
-
-
-
-        if (!$data) {
-
-            return AllFunction::response(404, 'NOT_FOUND', 'Invoice Not Found');
-        };
-
-        $category = Category::select('category_id', 'category', 'expired_time')->where('category_id', $data->payment->category_id)->first();
-
-        // get country code
-        $country = Country::where('country_id', $data->payment->country_id)->first();
-
-        // get code_payment
-        $codepayment = CodePayment::where('id', $data->payment->code_payment)->first();
+            $data = Transaction::with('payment', 'pricepoints', 'gamelist', 'transactionDetail')->where('invoice', $invoice)->first();
 
 
-        $result = HelperPayment::getInvoice($data, $codepayment, $country, $category);
 
-        return AllFunction::response(200, 'OK', 'Success get Invoice', $result);
-        //     } catch (\Throwable $th) {
-        //         return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
-        //     }
+            if (!$data) {
+
+                return AllFunction::response(404, 'NOT_FOUND', 'Invoice Not Found');
+            };
+
+            $category = Category::select('category_id', 'category', 'expired_time')->where('category_id', $data->payment->category_id)->first();
+
+            // get country code
+            $country = Country::where('country_id', $data->payment->country_id)->first();
+
+            // get code_payment
+            $codepayment = CodePayment::where('id', $data->payment->code_payment)->first();
+
+
+            $result = HelperPayment::getInvoice($data, $codepayment, $country, $category);
+
+            return AllFunction::response(200, 'OK', 'Success get Invoice', $result);
+        } catch (\Throwable $th) {
+            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        }
     }
 
 

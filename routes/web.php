@@ -92,7 +92,7 @@ $router->get('/user', ['middleware' => 'checkToken', function (Request $request)
                 'email' => $user->email,
                 'profile' => $user->profile,
                 'phone' => $user->phone,
-                'provider' => $user->socialAccount->provider,
+                'provider' => isset($user->socialAccount->provider) ? $user->socialAccount->provider : 'Email',
                 'bind' => []
             ];
 
@@ -136,59 +136,6 @@ $router->get('/user', ['middleware' => 'checkToken', function (Request $request)
 }]);
 
 
-// $router->get('/user', ['middleware' => 'checkToken', function (Request $request) {
-
-//     $user_id = $request->user_id;
-//     $name = $request->name;
-//     $email = $request->email;
-//     $profile = $request->profile;
-//     $phone = $request->phone;
-
-//     $bind = Bind::where('user_id', $user_id)->get();
-
-//     $data = [
-//         'user_id'   => $user_id,
-//         'name' => $name,
-//         'email' => $email,
-//         'profile'   => $profile,
-//         'phone' => $phone,
-//     ];
-
-//     $dt = [];
-
-
-//     foreach ($bind as $b) {
-//         $prov = SocialAccount::where('account_id', $b->account_id)->first();
-//         $userBind = User::where('user_id', $prov->user_Id)->first();
-
-
-//         if ($prov->provider == 'google') {
-//             $binding['google'] = [
-//                 'provider' => $prov->provider,
-//                 'user_id'   => $userBind->user_id,
-//                 'provider_id'   => $prov->provider_user_id,
-//                 'email'     => $userBind->email,
-//             ];
-//         }
-
-//         if ($prov->provider == 'facebook') {
-//             $binding['facebook'] = [
-//                 'provider' => $prov->provider,
-//                 'user_id'   => $userBind->user_id,
-//                 'provider_id'   => $prov->provider_user_id,
-//                 'email'     => $userBind->email,
-//             ];
-//         }
-
-//         array_push($dt, $binding);
-//     }
-
-//     $data['bind'] = $dt;
-
-//     return AllFunction::response(200, 'OK', 'get user success', $data);
-// }]);
-
-
 
 
 // ============================================================== payment =======================================================
@@ -203,6 +150,9 @@ $router->group(['prefix' => 'api/v1', 'middleware' => 'api-key'], function () us
     // game list
     $router->get('/gamelist', 'Topup\GameController@index');
     $router->get('/gamedetail', 'Topup\GameController@gameDetail');
+
+    //get player
+    $router->get('/getplayer', 'Topup\GameController@getPlayer');
 
 
     // get Country

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Topup;
 
+use App\Models\Player;
 use App\Models\Country;
 use App\Models\GameList;
 use App\Helpers\AllFunction;
@@ -90,6 +91,21 @@ class GameController extends Controller
             );
 
             return AllFunction::response(200, 'OK', 'Success Get Game Detail', $result);
+        } catch (\Throwable $th) {
+            return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
+        }
+    }
+
+    public function getPlayer(Request $request)
+    {
+        try {
+
+            $game_id = $request->query('game_id');
+            $user_id = $request->query('user_id');
+
+            $player = Player::select('user_id', 'player_id', 'game_id')->where('game_id', $game_id)->where('user_id', $user_id)->get();
+
+            return AllFunction::response(200, 'OK', 'Success Get Player', $player);
         } catch (\Throwable $th) {
             return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
         }
