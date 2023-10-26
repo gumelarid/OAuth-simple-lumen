@@ -25,7 +25,7 @@ class GameController extends Controller
                 $limit = 5;
             };
 
-            $data =  GameList::select('id', 'game_id', 'game_title', 'color', 'category', 'slug_game', 'cover', 'is_active')->limit($limit)->get();
+            $data =  GameList::select('id', 'game_id', 'game_title', 'color', 'category', 'slug_game', 'cover', 'is_active')->where('is_active', '1')->limit($limit)->get();
 
             if (!$data) {
 

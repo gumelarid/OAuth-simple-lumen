@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::table('game_lists', function (Blueprint $table) {
             $table->string('color', 25)->after('tooltips');
             $table->string('category', 50)->after('color');
+            $table->string('thumbnail', 50)->after('category');
         });
     }
 
@@ -29,6 +30,7 @@ return new class extends Migration
         Schema::table('game_lists', function (Blueprint $table) {
             $table->dropColumn('color');
             $table->dropColumn('category');
+            $table->dropColumn('thumbnail');
         });
     }
 };

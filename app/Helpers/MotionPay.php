@@ -371,17 +371,38 @@ class MotionPay
 
     public static function UpdateStatus($request)
     {
+        $_secretKey = env("MOTIONPAY_SECRET_KEY");
         DB::beginTransaction();
         try {
+            // check signature
+            $plainText = $request['trans_id']
+                . $request['merchant_code']
+                . $request['order_id']
+                . $request['amount']
+                . $request['payment_method']
+                . $request['mask_card']
+                . $request['va_number']
+                . $request['time_limit']
+                . $request['status_code']
+                . $request['status_desc']
+                . $request['fm_refnum']
+                . $request['datetime_payment']
+                . $request['approval_code'];
 
+            $signature = MotionPay::generateSignature($plainText . $_secretKey);
 
-            if ($request['status_code'] == 200) {
-                $status = 1;
-                Log::info('Success Transaction Paid Motion Pay', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Success Transaction Paid with Motion Pay Invoice ' . $request['order_id']]);
+            if ($request['signature'] == $signature) {
+                if ($request['status_code'] == 200) {
+                    $status = 1;
+                    Log::info('Success Transaction Paid Motion Pay', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Success Transaction Paid with Motion Pay Invoice ' . $request['order_id']]);
+                } else {
+
+                    $status = 2;
+                    Log::info('Cancel Transaction Paid Motion Pay', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Cancel Transaction Paid with Motion Pay Invoice ' . $request['order_id']]);
+                };
             } else {
-
                 $status = 2;
-                Log::info('Cancel Transaction Paid Motion Pay', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Cancel Transaction Paid with Motion Pay Invoice ' . $request['order_id']]);
+                Log::info('Signature invalid Motion Pay', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Signature invalid with Motion Pay Invoice ' . $request['order_id']]);
             };
 
 

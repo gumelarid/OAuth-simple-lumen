@@ -37,9 +37,17 @@ class AuthController extends Controller
     {
         try {
             $this->validate($request, [
-                'email'             => 'required|email',
                 'app_id'            => 'required',
+                'email'             => 'required|email',
+                // 'signature'         => 'required'
             ]);
+
+            $sign = $this->_signature($request->email, $request->app_id);
+
+            if ($sign !== $request->signature) {
+                return AllFunction::response(400, 'Signature Not valid', 'Signature Not valid');
+            }
+
 
             $clientSecret = Client::where('id', $request->app_id)->first();
             if (!$clientSecret) {
@@ -48,7 +56,8 @@ class AuthController extends Controller
 
             $email = $request->input('email');
 
-            $user = User::where('email', $email)->first();
+            $user = User::with('socialAccount')->where('email', $email)->first();
+
 
             if (!$user) {
 
@@ -75,20 +84,12 @@ class AuthController extends Controller
 
                 $user_id = $user->user_id;
 
-                $check =  User_token::where('user_id', $user_id)->first();
 
-                if ($check) {
-                    User_token::where('user_id', $user_id)->update([
-                        'token' => $token,
-                        'provider' => '3',
-                    ]);
-                } else {
-                    User_token::create([
-                        'user_id' => $user_id,
-                        'token' => $token,
-                        'provider' => '3',
-                    ]);
-                }
+                User_token::create([
+                    'user_id' => $user_id,
+                    'token' => $token,
+                    'provider' => '3',
+                ]);
             }
 
 
@@ -138,10 +139,7 @@ class AuthController extends Controller
                 return AllFunction::response(401, 'Failed', 'Login Failed, Token not valid');
             }
 
-            User_token::where('user_id', $user->user_id)->update([
-                'token' => null,
-                'provider' => '3',
-            ]);
+            User_token::where('user_id', $user->user_id)->delete();
 
             // check token
 
@@ -482,5 +480,16 @@ class AuthController extends Controller
         } catch (\Throwable $th) {
             return AllFunction::response(300, 'BAD REQUEST', 'internal server error');
         }
+    }
+
+
+    private function _signature($email, $app_id)
+    {
+
+        $data = $email . '|' . $app_id;
+
+        $signature = base64_encode($data);
+
+        return $signature;
     }
 }

@@ -180,15 +180,32 @@ class Razor
         DB::beginTransaction();
         try {
 
+            $plainText = $request['amount']
+                . $request['applicationCode']
+                . $request['currencyCode']
+                . $request['customerId']
+                . $request['description']
+                . $request['hashType']
+                . $request['referenceId']
+                . $request['returnUrl']
+                . $request['version'];
 
-            if ($request['paymentStatusCode'] == 00) {
-                $status = 1;
-                Log::info('Success Transaction Paid Razor', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Success Transaction Paid with Razor GOLD Invoice ' . $request['referenceId']]);
+            $signature = Razor::generateSignature($plainText);
+
+            if ($signature == $request['signature']) {
+                if ($request['paymentStatusCode'] == 00) {
+                    $status = 1;
+                    Log::info('Success Transaction Paid Razor', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Success Transaction Paid with Razor GOLD Invoice ' . $request['referenceId']]);
+                } else {
+                    $status = 2;
+                    Log::info('Cancel Transaction Paid Razor', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Cancel Transaction Paid with Razor GOLD Invoice ' . $request['referenceId']]);
+                };
             } else {
-
                 $status = 2;
-                Log::info('Cancel Transaction Paid Razor', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Cancel Transaction Paid with Razor GOLD Invoice ' . $request['referenceId']]);
-            };
+                Log::info('Razor signature not valid', ['DATA' => Carbon::now()->format('Y-m-d H:i:s') . ' | INFO ' . ' | Razor signature not valid with Razor GOLD Invoice ' . $request['referenceId']]);
+            }
+
+
 
 
 
