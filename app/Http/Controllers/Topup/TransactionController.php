@@ -233,6 +233,18 @@ class TransactionController extends Controller
         }
     }
 
+    public function pay(Request $request)
+    {
+
+        $data = Transaction::where('invoice', $request->invoice)->first();
+
+        Transaction::where('invoice', $request->invoice)->update([
+            'transaction_status' => $request->status
+        ]);
+
+        return AllFunction::response(200, 'OK', 'Payment success');
+    }
+
     public function notify(Request $request)
     {
 

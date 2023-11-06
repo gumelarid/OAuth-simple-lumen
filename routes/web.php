@@ -19,6 +19,8 @@ use App\Models\User;
 |
 */
 
+// dev mode
+$router->post('/notif', 'Topup\TransactionController@pay');
 
 
 // create client
@@ -142,7 +144,6 @@ $router->get('/user', ['middleware' => 'checkToken', function (Request $request)
 
 $router->post('/api/v1/transaction/notify', 'Topup\TransactionController@notify');
 $router->get('/api/v1/transaction/notify', 'Topup\TransactionController@notify');
-
 
 $router->get('/gethistory', ['middleware' => 'checkToken', 'uses' => 'Topup\HistoryController@index']);
 $router->group(['prefix' => 'api/v1', 'middleware' => 'api-key'], function () use ($router) {
